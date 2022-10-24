@@ -9,7 +9,7 @@ import random
 from tqdm import tqdm
 from datetime import datetime
 from sanitize_filename import sanitize
-
+import threading
 
 TQDM_COLORS = [
     "#ff0000",
@@ -104,18 +104,18 @@ def download_file(file_info):
 course_names = ['CSEN901- Artificial Intelligence', 'CSEN903- Advanced Computer lab', 'CSEN909- Human Computer Interaction', 'DMET901- Computer Vision', 'CSEN1095- Data Engineering']
 course_links = ['https://cms.guc.edu.eg/apps/student/CourseViewStn?id=572&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=795&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=571&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=2390&sid=58']
 
-course_names = ['CSEN903- Advanced Computer lab']
-course_links = [ 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58']
+# course_names = ['CSEN903- Advanced Computer lab']
+# course_links = [ 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58']
 
 # bs = BeautifulSoup(session.get(url_cms).text, "html.parser")
 files_to_download = []
 for (index, course_link) in enumerate(course_links):
 	# TODO:
-	# course_soup = BeautifulSoup( session.get(course_link).text, "html.parser",)
+	course_soup = BeautifulSoup( session.get(course_link).text, "html.parser",)
 
-	course_soup = BeautifulSoup( open("course.html").read(), "html.parser",)
-	files_body = course_soup.find_all(class_="card-body" )
-	for item in files_body:
+	# course_soup = BeautifulSoup( open("course.html").read(), "html.parser",)
+	course_item = course_soup.find_all(class_="card-body" )
+	for item in course_item:
 		# check if the card is not a course content, useful for `Filter weeks` card
 		if item.find('strong') is None:
 			continue
@@ -168,9 +168,10 @@ for (index, course_link) in enumerate(course_links):
 		)
 
 
-	# print(files_to_download)
-	download_file(files_to_download[0])
-	exit()
 
 
-
+threads = []
+for file_info in files_to_download:
+	thread = threading.Thread(target=download_file, args=(file_info,))
+	thread.start()
+	threads.append(thread)

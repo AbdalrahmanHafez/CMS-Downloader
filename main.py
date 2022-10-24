@@ -54,19 +54,29 @@ def testlogin():
 
 # testlogin()
 
-def download_file(url, path):
-	response = session.get(url, stream=True, allow_redirects=True)
+def download_file(file_info):
+	save_path = file_info["path"]
+	friendly_name = file_info["course"] + " " + file_info["name"]
+	name_ext = file_info["name"]+"."+file_info["extension"]
+
+	if(os.path.exists(save_path)):
+		print(f"[WARN] Ignoring File ({name_ext}) already exists in {save_path}")
+		return
+
+	response = session.get(file_info['url'], stream=True, allow_redirects=True)
 	if response.status_code != 200:
 		raise Exception("expected 200 status code, found ",response.status_code)
 		
 	total_size = int(response.headers.get("Content-Length"))
 
-	with open(path, "wb") as f:
+	os.makedirs(os.path.dirname(save_path), exist_ok=True)
+	
+	with open(save_path, "wb") as f:
 		with tqdm(
 			total=total_size,
 			unit="B",
 			unit_scale=True,
-			desc=path,
+			desc=friendly_name,
 			initial=0,
 			dynamic_ncols=True,
 			colour=random.choice(TQDM_COLORS),
@@ -125,8 +135,9 @@ for (index, course_link) in enumerate(course_links):
 
 		extension = url.rsplit(".", 1)[1]
 		course_path = os.path.join(download_path, course_names[index])
-		dir_path = os.path.join(course_path, week)
-		path = os.path.join(dir_path, f"{name}.{extension}")
+		# dir_path = os.path.join(course_path, week)
+		# path = os.path.join(dir_path, f"{name}.{extension}")
+		path = os.path.join(course_path, f"{name}.{extension}")
 
 		rated = item.select("input[class='ratedata']")[0]["data-rate"] != "0"
 
@@ -158,6 +169,7 @@ for (index, course_link) in enumerate(course_links):
 
 
 	# print(files_to_download)
+	download_file(files_to_download[0])
 	exit()
 
 

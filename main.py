@@ -45,6 +45,8 @@ with open('.env', 'r') as f:
 	urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+
+
 def testlogin():
 	response = session.get(url_cms)
 	if response.status_code != 200:
@@ -85,6 +87,17 @@ def download_file(file_info):
 				f.write(chunk)
 				t.update(len(chunk))
 
+	# Rate the downloaded file
+	data = {
+		"studentid": "32197",
+		"videoid": file_info["rateId"],
+		"rateid": "5"
+	}
+	r = session.post("https://cms.guc.edu.eg/apps/student/CourseViewStn.aspx/Goajax2", json=data, )
+	if r.status_code != 200:
+		print(f"[ERROR] Failed to rate file {name_ext} from {file_info['course']} status code {r.status_code}\n{r.text}", )
+
+
 
 # TODO:
 # bs = BeautifulSoup(session.get(url_cms).text, "html.parser")
@@ -101,19 +114,19 @@ def download_file(file_info):
 # course_names = [ re.sub( rgx_get_course_name, r"\1-\2", _courses_table[i].text.strip(),).strip() for i in range(2, len(_courses_table) - 1) ]
 
 # HARDCORDED TODO:
-course_names = ['CSEN901- Artificial Intelligence', 'CSEN903- Advanced Computer lab', 'CSEN909- Human Computer Interaction', 'DMET901- Computer Vision', 'CSEN1095- Data Engineering']
-course_links = ['https://cms.guc.edu.eg/apps/student/CourseViewStn?id=572&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=795&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=571&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=2390&sid=58']
+# course_names = ['CSEN901- Artificial Intelligence', 'CSEN903- Advanced Computer lab', 'CSEN909- Human Computer Interaction', 'DMET901- Computer Vision', 'CSEN1095- Data Engineering']
+# course_links = ['https://cms.guc.edu.eg/apps/student/CourseViewStn?id=572&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=795&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=571&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=2390&sid=58']
 
-# course_names = ['CSEN903- Advanced Computer lab']
-# course_links = [ 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58']
+course_names = ['CSEN903- Advanced Computer lab']
+course_links = [ 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58']
 
 # bs = BeautifulSoup(session.get(url_cms).text, "html.parser")
 files_to_download = []
 for (index, course_link) in enumerate(course_links):
 	# TODO:
-	course_soup = BeautifulSoup( session.get(course_link).text, "html.parser",)
+	# course_soup = BeautifulSoup( session.get(course_link).text, "html.parser",)
 
-	# course_soup = BeautifulSoup( open("course.html").read(), "html.parser",)
+	course_soup = BeautifulSoup( open("course.html").read(), "html.parser",)
 	course_item = course_soup.find_all(class_="card-body" )
 	for item in course_item:
 		# check if the card is not a course content, useful for `Filter weeks` card
@@ -140,8 +153,9 @@ for (index, course_link) in enumerate(course_links):
 		path = os.path.join(course_path, f"{name}.{extension}")
 
 		rated = item.select("input[class='ratedata']")[0]["data-rate"] != "0"
-
 		if(rated): continue
+
+		rateId = item.select("input[class='ratedata']")[0]['data-id']
 
 		file_info = {
 				"course": course_names[index],
@@ -151,6 +165,7 @@ for (index, course_link) in enumerate(course_links):
 				"extension": extension,
 				"path": path,	
 				"url": url,
+				"rateId": rateId
 			}
 
 		print(f"course: {course_names[index]}")
@@ -166,6 +181,7 @@ for (index, course_link) in enumerate(course_links):
 		files_to_download.append(
 			file_info
 		)
+
 
 
 

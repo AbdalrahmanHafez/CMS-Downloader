@@ -10,6 +10,9 @@ from tqdm import tqdm
 from datetime import datetime
 from sanitize_filename import sanitize
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from tqdm_multi_thread_factory import TqdmMultiThreadFactory
+import time
 
 TQDM_COLORS = [
     "#ff0000",
@@ -56,9 +59,9 @@ def testlogin():
 
 # testlogin()
 
-def download_file(file_info):
+def download_file(position, file_info):
 	save_path = file_info["path"]
-	friendly_name = file_info["course"] + " " + file_info["name"]
+	friendly_name = f"{file_info['course']} ({file_info['name']})" 
 	name_ext = file_info["name"]+"."+file_info["extension"]
 
 	if(os.path.exists(save_path)):
@@ -67,6 +70,7 @@ def download_file(file_info):
 
 	response = session.get(file_info['url'], stream=True, allow_redirects=True)
 	if response.status_code != 200:
+		print("expected 200 status code, found ",response.status_code)
 		raise Exception("expected 200 status code, found ",response.status_code)
 		
 	total_size = int(response.headers.get("Content-Length"))
@@ -74,20 +78,28 @@ def download_file(file_info):
 	os.makedirs(os.path.dirname(save_path), exist_ok=True)
 	
 	with open(save_path, "wb") as f:
-		with tqdm(
-			total=total_size,
-			unit="B",
-			unit_scale=True,
-			desc=friendly_name,
-			initial=0,
-			dynamic_ncols=True,
-			colour=random.choice(TQDM_COLORS),
-		) as t:
+		with multi_thread_factory.create(position, friendly_name, total_size) as progress:
 			for chunk in response.iter_content(chunk_size=1024):
 				f.write(chunk)
-				t.update(len(chunk))
+				progress.update(len(chunk))
+
+		# with tqdm(
+		# 	total=total_size,
+		# 	unit="B",
+		# 	unit_scale=True,
+		# 	desc=friendly_name,
+		# 	initial=0,
+		# 	dynamic_ncols=True,
+		# 	colour=random.choice(TQDM_COLORS),
+		# ) as t:
+		# 	for chunk in response.iter_content(chunk_size=1024):
+		# 		f.write(chunk)
+		# 		t.update(len(chunk))
 
 	# Rate the downloaded file
+	# TODO:
+	return
+
 	data = {
 		"studentid": "32197",
 		"videoid": file_info["rateId"],
@@ -114,19 +126,19 @@ def download_file(file_info):
 # course_names = [ re.sub( rgx_get_course_name, r"\1-\2", _courses_table[i].text.strip(),).strip() for i in range(2, len(_courses_table) - 1) ]
 
 # HARDCORDED TODO:
-# course_names = ['CSEN901- Artificial Intelligence', 'CSEN903- Advanced Computer lab', 'CSEN909- Human Computer Interaction', 'DMET901- Computer Vision', 'CSEN1095- Data Engineering']
-# course_links = ['https://cms.guc.edu.eg/apps/student/CourseViewStn?id=572&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=795&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=571&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=2390&sid=58']
+course_names = ['CSEN901- Artificial Intelligence', 'CSEN903- Advanced Computer lab', 'CSEN909- Human Computer Interaction', 'DMET901- Computer Vision', 'CSEN1095- Data Engineering']
+course_links = ['https://cms.guc.edu.eg/apps/student/CourseViewStn?id=572&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=795&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=571&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=2390&sid=58']
 
-course_names = ['CSEN903- Advanced Computer lab']
-course_links = [ 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58']
+# course_names = ['CSEN903- Advanced Computer lab']
+# course_links = [ 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58']
 
 # bs = BeautifulSoup(session.get(url_cms).text, "html.parser")
 files_to_download = []
 for (index, course_link) in enumerate(course_links):
 	# TODO:
-	# course_soup = BeautifulSoup( session.get(course_link).text, "html.parser",)
+	course_soup = BeautifulSoup( session.get(course_link).text, "html.parser",)
+	# course_soup = BeautifulSoup( open("course.html").read(), "html.parser",)
 
-	course_soup = BeautifulSoup( open("course.html").read(), "html.parser",)
 	course_item = course_soup.find_all(class_="card-body" )
 	for item in course_item:
 		# check if the card is not a course content, useful for `Filter weeks` card
@@ -186,8 +198,13 @@ for (index, course_link) in enumerate(course_links):
 
 
 
-threads = []
-for file_info in files_to_download:
-	thread = threading.Thread(target=download_file, args=(file_info,))
-	thread.start()
-	threads.append(thread)
+# threads = []
+# for file_info in files_to_download:
+# 	thread = threading.Thread(target=download_file, args=(file_info,))
+# 	thread.start()
+# 	threads.append(thread)
+
+with ThreadPoolExecutor(max_workers=5) as executor:
+	multi_thread_factory = TqdmMultiThreadFactory()
+	for i, file_info in enumerate(files_to_download, 1):
+		executor.submit(download_file, i, file_info)

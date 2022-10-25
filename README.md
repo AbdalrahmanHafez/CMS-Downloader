@@ -1,7 +1,8 @@
 # CMS-Downloader
 
-1. Python script to download Content from the GUC Content Management System [CMS](https://cms.guc.edu.eg/)
-2. Then rates it, this to mark it as being downloaded and not download it again. You can disable this behaviour via --no-rate argument.
+- Python script to download Content from the GUC Content Management System [CMS](https://cms.guc.edu.eg/)
+- Then rates it, this to mark it as being downloaded and not download it again. You can disable this behaviour via --no-rate argument.
+- Downloads in parallel with threading.
 
 ![](https://i.imgur.com/oXib1qA.gif)
 

@@ -13,11 +13,21 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from tqdm_multi_thread_factory import TqdmMultiThreadFactory
 import time
+import logging
+from requests.adapters import HTTPAdapter, Retry
+from printer import Printer
 
 download_path = "downloads"
 url_cms = "https://cms.guc.edu.eg"
 session = requests.Session()
+max_thread_count = 5
 
+
+printer = Printer()
+
+# logging.basicConfig(level=logging.DEBUG)
+retries = Retry(total=5, backoff_factor=1, status_forcelist=[ 500, 502, 503, 504 ])
+session.mount('https://', HTTPAdapter(max_retries=retries))
 
 start_time = time.time()
 TQDM_COLORS = [
@@ -142,7 +152,7 @@ for (index, course_link) in enumerate(course_links):
 		# check if the card is not a course content, useful for `Filter weeks` card
 		if item.find('strong') is None:
 			continue
-		# files_to_download.append(item)
+		
 
 		url = url_cms + item.find("a")["href"]
 
@@ -162,10 +172,16 @@ for (index, course_link) in enumerate(course_links):
 		# path = os.path.join(dir_path, f"{name}.{extension}")
 		path = os.path.join(course_path, f"{name}.{extension}")
 
+		# Print needed files, this before rate to keep course name when displayed
+		printer.addKey(course_names[index])
+		printer.display()
+
 		rated = item.select("input[class='ratedata']")[0]["data-rate"] != "0"
 		if(rated): continue
-
 		rateId = item.select("input[class='ratedata']")[0]['data-id']
+
+
+		printer.addValue(course_names[index], name, description)
 
 		file_info = {
 				"course": course_names[index],
@@ -178,19 +194,21 @@ for (index, course_link) in enumerate(course_links):
 				"rateId": rateId
 			}
 
-		print(f"course: {course_names[index]}")
-		print(f"week: {week}")
-		print(f"description: {description}")
-		print(f"name: {name}")
-		print(f"extension: {extension}")
-		print(f"path: {path}")
-		print(f"url: {url}")
+		# print(f"course: {course_names[index]}")
+		# print(f"week: {week}")
+		# print(f"description: {description}")
+		# print(f"name: {name}")
+		# print(f"extension: {extension}")
+		# print(f"path: {path}")
+		# print(f"url: {url}")
 		# print(file_info)
-		print("========")
+		# print("========")
+
 
 		files_to_download.append(
 			file_info
 		)
+
 
 
 
@@ -202,7 +220,7 @@ for (index, course_link) in enumerate(course_links):
 # 	thread.start()
 # 	threads.append(thread)
 
-with ThreadPoolExecutor(max_workers=5) as executor:
+with ThreadPoolExecutor(max_workers=max_thread_count) as executor:
 	multi_thread_factory = TqdmMultiThreadFactory()
 	for i, file_info in enumerate(files_to_download, 1):
 		executor.submit(download_file, i, file_info)

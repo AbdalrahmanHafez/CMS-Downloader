@@ -246,3 +246,6 @@ if(not cliarg_no_downlaod):
 if(len(files_to_download) == 0):
 	print("[INFO] No unrated files to download")
 print("Done in", int(time.time() - start_time), "seconds")
+print()
+print("[INFO] ./TODO.cmd")
+os.system(f"TODO.cmd {download_path}")

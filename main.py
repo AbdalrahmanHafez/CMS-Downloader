@@ -86,7 +86,7 @@ def testlogin():
 
 def download_file(position, file_info):
 	save_path = file_info["path"]
-	friendly_name = f"{file_info['course']} ({file_info['name']})" 
+	friendly_name = f"{file_info['course']} {file_info['name']}" 
 	name_ext = file_info["name"]+"."+file_info["extension"]
 
 	if(os.path.exists(save_path)):
@@ -95,6 +95,7 @@ def download_file(position, file_info):
 
 	response = session.get(file_info['url'], stream=True, allow_redirects=True)
 	if response.status_code != 200:
+		print(f"[ERROR] Failed to download file {name_ext}")
 		print("expected 200 status code, found ",response.status_code , response.text)
 		raise Exception("expected 200 status code, found ",response.status_code, response.text)
 		

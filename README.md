@@ -38,4 +38,4 @@ only one optional flag is supported.
 
 ## References
 
-- thanks to [@aboueleyes](https://github.com/aboueleyes/cms-downloader-refined) i used some of his code.
+- thanks to [@aboueleyes](https://github.com/aboueleyes/cms-downloader-refined) i used some of his code :)

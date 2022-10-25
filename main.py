@@ -14,6 +14,12 @@ from concurrent.futures import ThreadPoolExecutor
 from tqdm_multi_thread_factory import TqdmMultiThreadFactory
 import time
 
+download_path = "downloads"
+url_cms = "https://cms.guc.edu.eg"
+session = requests.Session()
+
+
+start_time = time.time()
 TQDM_COLORS = [
     "#ff0000",
     "#00ff00",
@@ -24,11 +30,6 @@ TQDM_COLORS = [
     "#ffffff",
     "#000000",
 ]
-
-
-download_path = "downloads"
-url_cms = "https://cms.guc.edu.eg"
-session = requests.Session()
 
 if(not os.path.exists('.env')):
 	print("[ERROR] no .env file found")
@@ -70,8 +71,8 @@ def download_file(position, file_info):
 
 	response = session.get(file_info['url'], stream=True, allow_redirects=True)
 	if response.status_code != 200:
-		print("expected 200 status code, found ",response.status_code)
-		raise Exception("expected 200 status code, found ",response.status_code)
+		print("expected 200 status code, found ",response.status_code , response.text)
+		raise Exception("expected 200 status code, found ",response.status_code, response.text)
 		
 	total_size = int(response.headers.get("Content-Length"))
 
@@ -97,11 +98,8 @@ def download_file(position, file_info):
 		# 		t.update(len(chunk))
 
 	# Rate the downloaded file
-	# TODO:
-	return
-
 	data = {
-		"studentid": "32197",
+		"studentid": student_id,
 		"videoid": file_info["rateId"],
 		"rateid": "5"
 	}
@@ -111,32 +109,32 @@ def download_file(position, file_info):
 
 
 
-# TODO:
-# bs = BeautifulSoup(session.get(url_cms).text, "html.parser")
-# course_links = [link.get("href") for link in bs.find_all("a") if link.get("href")]
-# course_links = [ url_cms + link for link in course_links if re.match(r"\/apps\/student\/CourseViewStn\?id(.*)", link) ]
+bs = BeautifulSoup(session.get(url_cms).text, "html.parser")
+course_links = [link.get("href") for link in bs.find_all("a") if link.get("href")]
+course_links = [ url_cms + link for link in course_links if re.match(r"\/apps\/student\/CourseViewStn\?id(.*)", link) ]
+student_id = bs.select("input[id='ContentPlaceHolderright_ContentPlaceHoldercontent_HiddenFielduser']")[0].get("value")
+# bs.select("input[id='HiddenFieldstaffid']")[0].get("value") named this way in each course page
 
-# rgx_get_course_name = re.compile(r"\n*[\(][\|]([^\|]*)[\|][\)]([^\(]*)[\(].*\n*")
-# _courses_table = list(
-# 	bs.find(
-# 		"table",
-# 		{"id": "ContentPlaceHolderright_ContentPlaceHoldercontent_GridViewcourses"},
-# 	)
-# )
-# course_names = [ re.sub( rgx_get_course_name, r"\1-\2", _courses_table[i].text.strip(),).strip() for i in range(2, len(_courses_table) - 1) ]
+rgx_get_course_name = re.compile(r"\n*[\(][\|]([^\|]*)[\|][\)]([^\(]*)[\(].*\n*")
+_courses_table = list(
+	bs.find(
+		"table",
+		{"id": "ContentPlaceHolderright_ContentPlaceHoldercontent_GridViewcourses"},
+	)
+)
+course_names = [ re.sub( rgx_get_course_name, r"\1-\2", _courses_table[i].text.strip(),).strip() for i in range(2, len(_courses_table) - 1) ]
 
-# HARDCORDED TODO:
-course_names = ['CSEN901- Artificial Intelligence', 'CSEN903- Advanced Computer lab', 'CSEN909- Human Computer Interaction', 'DMET901- Computer Vision', 'CSEN1095- Data Engineering']
-course_links = ['https://cms.guc.edu.eg/apps/student/CourseViewStn?id=572&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=795&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=571&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=2390&sid=58']
+# HARDCODE
+# course_names = ['CSEN901- Artificial Intelligence', 'CSEN903- Advanced Computer lab', 'CSEN909- Human Computer Interaction', 'DMET901- Computer Vision', 'CSEN1095- Data Engineering']
+# course_links = ['https://cms.guc.edu.eg/apps/student/CourseViewStn?id=572&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=795&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=571&sid=58', 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=2390&sid=58']
 
 # course_names = ['CSEN903- Advanced Computer lab']
 # course_links = [ 'https://cms.guc.edu.eg/apps/student/CourseViewStn?id=573&sid=58']
 
-# bs = BeautifulSoup(session.get(url_cms).text, "html.parser")
 files_to_download = []
 for (index, course_link) in enumerate(course_links):
-	# TODO:
 	course_soup = BeautifulSoup( session.get(course_link).text, "html.parser",)
+	# HARDCODE
 	# course_soup = BeautifulSoup( open("course.html").read(), "html.parser",)
 
 	course_item = course_soup.find_all(class_="card-body" )
@@ -208,3 +206,7 @@ with ThreadPoolExecutor(max_workers=5) as executor:
 	multi_thread_factory = TqdmMultiThreadFactory()
 	for i, file_info in enumerate(files_to_download, 1):
 		executor.submit(download_file, i, file_info)
+
+if(len(files_to_download) == 0):
+	print("[INFO] No unrated files to download")
+print("Done in", int(time.time() - start_time), "seconds")

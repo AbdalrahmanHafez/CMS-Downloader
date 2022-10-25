@@ -16,6 +16,20 @@ import time
 import logging
 from requests.adapters import HTTPAdapter, Retry
 from printer import Printer
+import sys
+
+
+# CLI Arguments
+# only supported single argument --no-download(-nd) --no-rate(-nr)
+cliarg_no_downlaod = False
+cliarg_no_rate = False
+if(len(sys.argv) > 1):
+	if(sys.argv[1] in ["--no-download", "-nd"]):
+		print("[WARN] No Download flag enabled")
+		cliarg_no_downlaod = True
+	elif(sys.argv[1] in ["--no-rate", "-nr"]):
+		print("[WARN] No Rate flag enabled")
+		cliarg_no_rate = True
 
 download_path = "downloads"
 url_cms = "https://cms.guc.edu.eg"
@@ -108,6 +122,9 @@ def download_file(position, file_info):
 		# 		t.update(len(chunk))
 
 	# Rate the downloaded file
+	if(cliarg_no_rate):
+		return
+
 	data = {
 		"studentid": student_id,
 		"videoid": file_info["rateId"],
@@ -220,10 +237,11 @@ for (index, course_link) in enumerate(course_links):
 # 	thread.start()
 # 	threads.append(thread)
 
-with ThreadPoolExecutor(max_workers=max_thread_count) as executor:
-	multi_thread_factory = TqdmMultiThreadFactory()
-	for i, file_info in enumerate(files_to_download, 1):
-		executor.submit(download_file, i, file_info)
+if(not cliarg_no_downlaod):
+	with ThreadPoolExecutor(max_workers=max_thread_count) as executor:
+		multi_thread_factory = TqdmMultiThreadFactory()
+		for i, file_info in enumerate(files_to_download, 1):
+			executor.submit(download_file, i, file_info)
 
 if(len(files_to_download) == 0):
 	print("[INFO] No unrated files to download")

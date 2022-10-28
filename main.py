@@ -21,15 +21,27 @@ import sys
 
 # CLI Arguments
 # only supported single argument --no-download(-nd) --no-rate(-nr)
-cliarg_no_downlaod = False
-cliarg_no_rate = False
+flag_no_downlaod = False
+flag_no_rate = False
+flag_annoncements = False
 if(len(sys.argv) > 1):
 	if(sys.argv[1] in ["--no-download", "-nd"]):
 		print("[WARN] No Download flag enabled")
-		cliarg_no_downlaod = True
+		flag_no_downlaod = True
 	elif(sys.argv[1] in ["--no-rate", "-nr"]):
 		print("[WARN] No Rate flag enabled")
-		cliarg_no_rate = True
+		flag_no_rate = True
+	elif(sys.argv[1] in ["--announcements", "-an"]):
+		print("[WARN] Announcements flag enabled")
+		flag_annoncements = True
+	else:
+		print("[ERROR] Invalid argument")
+		print("""
+		--no-download(-nd) : Dont Download, only list what's new.
+		--no-rate(-nr) : Download but not rate.
+		--announcements(-an) : Lists only announcements.
+		""")
+		exit()
 
 download_path = "downloads"
 url_cms = "https://cms.guc.edu.eg"
@@ -37,8 +49,9 @@ session = requests.Session()
 max_thread_count = 5
 
 
+#
+course_announcements = []
 printer = Printer()
-
 # logging.basicConfig(level=logging.DEBUG)
 retries = Retry(total=5, backoff_factor=1, status_forcelist=[ 500, 502, 503, 504 ])
 session.mount('https://', HTTPAdapter(max_retries=retries))
@@ -123,7 +136,7 @@ def download_file(position, file_info):
 		# 		t.update(len(chunk))
 
 	# Rate the downloaded file
-	if(cliarg_no_rate):
+	if flag_no_rate:
 		return
 
 	data = {
@@ -163,7 +176,11 @@ files_to_download = []
 for (index, course_link) in enumerate(course_links):
 	course_soup = BeautifulSoup( session.get(course_link).text, "html.parser",)
 	# HARDCODE
-	# course_soup = BeautifulSoup( open("course.html").read(), "html.parser",)
+	# course_soup = BeautifulSoup( open("course2.html").read(), "html.parser",)
+		
+	course_announcement = course_soup.find("h5", string="Course Announcements:").parent.select(":nth-child(3)")[0].get_text(separator="\n")
+	if(flag_annoncements):
+		course_announcements.append(f"[{course_names[index]}]\n{course_announcement}\n")
 
 	course_item = course_soup.find_all(class_="card-body" )
 	for item in course_item:
@@ -238,15 +255,23 @@ for (index, course_link) in enumerate(course_links):
 # 	thread.start()
 # 	threads.append(thread)
 
-if(not cliarg_no_downlaod):
+if(flag_no_downlaod == False):
 	with ThreadPoolExecutor(max_workers=max_thread_count) as executor:
 		multi_thread_factory = TqdmMultiThreadFactory()
 		for i, file_info in enumerate(files_to_download, 1):
 			executor.submit(download_file, i, file_info)
 
-if(len(files_to_download) == 0):
-	print("[INFO] No unrated files to download")
-print("Done in", int(time.time() - start_time), "seconds")
+	if(len(files_to_download) == 0):
+		print("[INFO] No unrated files to download")
+
+if(flag_annoncements):
+	for string in course_announcements:
+		print(string)
+
+
+
 print()
-print("[INFO] ./TODO.cmd")
-os.system(f"TODO.cmd {download_path}")
+print("Done in", int(time.time() - start_time), "seconds")
+
+# print("[INFO] ./TODO.cmd")
+# os.system(f"TODO.cmd {download_path}")

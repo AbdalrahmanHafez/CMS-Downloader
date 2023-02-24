@@ -273,5 +273,5 @@ if(flag_annoncements):
 print()
 print("Done in", int(time.time() - start_time), "seconds")
 
-# print("[INFO] ./TODO.cmd")
-# os.system(f"TODO.cmd {download_path}")
+print("[INFO] ./TODO.cmd")
+os.system(f"TODO.cmd {download_path}")
